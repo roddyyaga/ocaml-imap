@@ -20,13 +20,24 @@
    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
    SOFTWARE. *)
 
-(* type t *)
+type error =
+  | Incorrect_tag of string * string
+  | Decode_error of string * int
+  | Unexpected_cont
+  | Bad_greeting
+  | Auth_error of string
+  | Server_error of string
+
+exception Error of error
+
+type t
 (** The type for connections. *)
 
-(* val connect: host:string -> port:int -> username:string -> password:string -> t Lwt.t *)
+val connect :
+  host:string -> port:int -> username:string -> password:string -> t Lwt.t
 (** [connect server username password mailbox]. *)
 
-(* val disconnect: t -> unit Lwt.t *)
+val disconnect : t -> unit Lwt.t
 (** Disconnect. *)
 
-(* val run: t -> 'a cmd -> 'a Lwt.t *)
+val run : t -> 'a Imap.cmd -> 'a Lwt.t
