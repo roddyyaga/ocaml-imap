@@ -123,9 +123,12 @@ val store :
 val uid_store :
   ?unchanged_since:modseq -> store_mode -> uid list -> store_kind -> unit cmd
 
+module Fetch = Fetch
 module Parser = Parser
 module Encoder = Encoder
 module Response = Response
+module Search = Search
+module Common = Common
 
 module L : sig
   val is_complete : Bytes.t -> int -> int option

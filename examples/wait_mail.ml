@@ -1,4 +1,4 @@
-(* this code is in the public domain *)
+(*(* this code is in the public domain *)
 
 (** {1:ex Example: checking for new mail}
 
@@ -112,4 +112,4 @@ let wait_mail host ?port username password mailbox =
    *       loop ()
    * in
    * loop () *)
-
+*)

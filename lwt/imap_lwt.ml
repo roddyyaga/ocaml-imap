@@ -85,7 +85,7 @@ end = struct
         | Lf n, '\n' ->
             assert (i + 1 = String.length s);
             Some n
-        | _ -> loop Begin i
+        | _ -> loop Begin (i + 1)
     in
     loop Begin 0
 end
@@ -93,21 +93,32 @@ end
 let parse { ic; _ } =
   let buf = Buffer.create 17 in
   let rec loop () =
+    print_endline "Waiting";
     Lwt_io.read_line ic >>= fun s ->
+    print_endline ("Reading: " ^ s);
     let s = s ^ "\r\n" in
     Buffer.add_string buf s;
+    print_endline "M";
     match L.is_literal s with
     | Some n ->
+        print_endline "S";
         let b = Bytes.create n in
         Lwt_io.read_into_exactly ic b 0 n >>= fun () ->
         Buffer.add_bytes buf b;
         loop ()
-    | None -> Lwt.return (Buffer.contents buf)
+    | None ->
+        print_endline "N";
+
+        Lwt.return (Buffer.contents buf)
   in
   loop () >>= fun s ->
+  print_endline "looped";
   match Parser.response { Parser.s; p = 0 } with
   | Ok x -> Lwt.return x
-  | Error (s, pos) -> Lwt.fail (Error (Decode_error (s, pos)))
+  | Error (s, pos) ->
+      print_endline "Decode error";
+      print_endline s;
+      Lwt.fail (Error (Decode_error (s, pos)))
 
 let rec send imap r process res =
   match r with
@@ -132,6 +143,7 @@ let send imap r process res =
 
 let wrap_process f res = function
   | Response.Untagged.State (NO (_, s) | BAD (_, s)) ->
+      print_endline "Server error";
       raise (Error (Server_error s))
   | u -> f res u
 
@@ -154,16 +166,27 @@ let run imap { format; u = E (v, process, finish) } =
 let () = Ssl.init ()
 
 let connect ~host ~port ~username ~password =
+  print_endline "1";
   let ctx = Ssl.create_context Ssl.TLSv1_2 Ssl.Client_context in
   let sock = Lwt_unix.socket Lwt_unix.PF_INET Lwt_unix.SOCK_STREAM 0 in
   Lwt_unix.gethostbyname host >>= fun he ->
+  print_endline "2";
   let addr = Lwt_unix.ADDR_INET (he.Unix.h_addr_list.(0), port) in
   Lwt_unix.connect sock addr >>= fun () ->
+  print_endline "3";
   Lwt_ssl.ssl_connect sock ctx >>= fun sock ->
   let imap = create_connection sock in
+  print_endline "4";
   parse imap >>= function
-  | Response.Untagged _ -> run imap (login username password) >|= fun () -> imap
-  | Tagged _ | Cont _ -> Lwt.fail_with "unexpected response"
+  | Response.Untagged _ ->
+      print_endline "5";
+
+      run imap (login username password) >|= fun () ->
+      print_endline "5";
+      imap
+  | Tagged _ | Cont _ ->
+      print_endline "error";
+      Lwt.fail_with "unexpected response"
 
 let disconnect imap =
   run imap logout >>= fun () -> Lwt_ssl.ssl_shutdown imap.sock

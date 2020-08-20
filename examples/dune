@@ -1,0 +1,3 @@
+(executable
+ (name minimutt)
+ (libraries imap-lwt cmdliner))
